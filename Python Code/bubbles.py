@@ -1,10 +1,10 @@
-import numpy as np
+import numpy as np # type: ignore
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
 from scipy.signal import windows
 
 # Step 1: Load the WAV file
-fs, data = wavfile.read("path_to_your_file.wav")  # Replace with the correct path to your WAV file
+fs, data = wavfile.read("C:/Users/reabt/OneDrive/Documents/Hackathon Stuff/Data/2019-05-21T15-00-12.wav")  # Replace with the correct path to your WAV file
 
 # Step 2: Define parameters
 tstart = 10  # Starting time in seconds
@@ -21,8 +21,8 @@ t = np.arange(tstart * fs, (tstart + ts) * fs) / fs  # Time vector for the segme
 short = data[tstart * fs: (tstart + ts) * fs]  # Segment of data for tstart to tstart+ts seconds
 
 # H is the number of channels or hydrophones (columns in the data)
-H = data.shape[1] if len(data.shape) > 1 else 1
-
+#H = data.shape[1] if len(data.shape) > 1 else 1
+H = 5
 L = len(short)  # Number of samples
 
 # Segment parameters
@@ -85,28 +85,49 @@ t = np.linspace(0, ts, N_s)
 fig, axs = plt.subplots(3, 1, figsize=(10, 8))
 
 # Cross Spectrogram
-axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='viridis')  # Set color map to 'viridis'
 axs[0].set_title(f'Cross Spectrogram of {ts}s of data')
 axs[0].set_xlabel('Time [s]')
 axs[0].set_ylabel('Frequency [Hz]')
-fig.colorbar(axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[0])
+fig.colorbar(axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='viridis'), ax=axs[0])
 
 # Normalized Cross Spectrogram
-axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='plasma')  # Set color map to 'plasma'
 axs[1].set_title(f'Normalized Cross Spectrogram of {ts}s of data')
 axs[1].set_xlabel('Time [s]')
 axs[1].set_ylabel('Frequency [Hz]')
-fig.colorbar(axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[1])
+fig.colorbar(axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='plasma'), ax=axs[1])
 
 # Thresholded Cross Spectrogram
 Th = 10
 hatC_ThdB = hatC.copy()
 hatC_ThdB[hatC <= Th] = 0
-axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+
+axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno')  # Set color map to 'inferno'
 axs[2].set_title(f'Thresholded at {Th} dB')
 axs[2].set_xlabel('Time [s]')
 axs[2].set_ylabel('Frequency [Hz]')
-fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[2])
+fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno'), ax=axs[2])
 
 plt.tight_layout()
 plt.show()
+
+row = 0
+bubbleCount = 0
+bubbleFlag = False
+
+for line in hatC_ThdB:
+    row += 1
+    col = 0
+    bubbleSize = 0
+    for val in line:
+        col += 1
+        if(val > 0):
+            bubbleSize += 1
+            if(bubbleSize == 10):
+                bubbleCount += 1
+
+
+print(row)
+print(col)
+print("Total bubbles: " , bubbleCount)

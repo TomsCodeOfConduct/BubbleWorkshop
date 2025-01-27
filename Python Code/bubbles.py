@@ -1,114 +1,112 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import hamming
-from scipy.fft import fft
+from scipy.io import wavfile
+from scipy.signal import windows
 
-# Given values
-tstart = 10  # seconds of interest
-ts = 5  # seconds of interest
-fs = 96000  # sampling frequency
-H = len(data[0])  # number of hydrophones
-short = data[tstart * fs : (tstart + ts) * fs, :]  # shorten data over time period of interest
-L = len(short[:, 0])  # number of samples
+# Step 1: Load the WAV file
+fs, data = wavfile.read("path_to_your_file.wav")  # Replace with the correct path to your WAV file
 
-len_seg = 512  # segment length
-overlap = 256  # overlap between segments
-N_s = len(t) // 256 - 1  # number of segments
+# Step 2: Define parameters
+tstart = 10  # Starting time in seconds
+ts = 5  # Time segment in seconds
 
-# Create segment function
+# If the data has multiple channels (e.g., stereo or multi-channel), choose one (e.g., first channel)
+# If data is 1D, it's already a single-channel signal
+data = data[:, 0] if len(data.shape) > 1 else data
+
+# Define the time vector for ts seconds of data
+t = np.arange(tstart * fs, (tstart + ts) * fs) / fs  # Time vector for the segment of interest
+
+# Get the length of the data segment
+short = data[tstart * fs: (tstart + ts) * fs]  # Segment of data for tstart to tstart+ts seconds
+
+# H is the number of channels or hydrophones (columns in the data)
+H = data.shape[1] if len(data.shape) > 1 else 1
+
+L = len(short)  # Number of samples
+
+# Segment parameters
+len_seg = 512  # Length of each segment
+overlap = 256  # Overlap between segments
+N_s = len(t) // overlap - 1  # Number of segments
+
+# Step 3: Create a function to extract segments
 def seg(p, k):
-    return short[(p - 1) * overlap : (p - 1) * overlap + len_seg, k]
+    return short[(p - 1) * overlap: (p - 1) * overlap + len_seg]
 
-# FFT function with Hamming window
+# Step 4: Create the FFT function with Hamming window
 def X_pk(k, p):
-    return fft(hamming(len(seg(p, k))) * seg(p, k), 9600)
+    return np.fft.fft(windows.hamming(len(seg(p, k))) * seg(p, k), 9600)  # 9600 is the number of FFT points
 
 # Frequency vector
-Fs = np.linspace(0, fs / len(X_pk(1, 1)) * (len(X_pk(1, 1)) - 1), len(X_pk(1, 1)))
+Fs = fs / len(X_pk(1, 1)) * np.arange(len(X_pk(1, 1)))
 
-# Cross-spectrum function
+# Step 5: Cross-spectral function
 def C_kl(k, l, p):
     return np.abs(np.conj(X_pk(k, p)) * X_pk(l, p))
 
-# Initialize variables
+# Step 6: Initialize arrays for cross-spectrogram calculation
 barC_hold = np.zeros_like(C_kl(1, 1, 1))
 barC = np.zeros((N_s, len(C_kl(1, 1, 1))))
 
-# Loop to calculate cross-spectrogram
-for pc in range(N_s):
+# Step 7: Loop through segments to calculate cross-spectrogram
+for pc in range(1, N_s + 1):
     barC_hold = np.zeros_like(C_kl(1, 1, 1))
-    for kc in range(H - 1):
-        for lc in range(kc + 1, H):
-            barC_hold += C_kl(kc, lc, pc)
-    barC[pc, :] = 2 / (H * (H - 1)) * barC_hold
+    
+    # Calculate cross-spectrogram only if H > 1 (i.e., multiple hydrophones)
+    if H > 1:
+        for kc in range(1, H):
+            for lc in range(kc + 1, H + 1):
+                barC_hold += C_kl(kc, lc, pc)
+        
+        barC[pc - 1, :] = 2 / (H * (H - 1)) * barC_hold
+    else:
+        # Handle the case when H = 1 (only one channel), no cross-spectrogram can be computed
+        barC[pc - 1, :] = np.zeros_like(barC_hold)
 
-# Convert to dB
-barCdB = 10 * np.log10(barC / 1e-6)
+# Step 8: Convert to dB with a larger minimum value to avoid very small numbers
+# Ensure there are no zeros before log10 conversion
+barC_safe = np.maximum(barC, 1e-6)  # Ensure there are no zeros in barC
+barCdB = 10 * np.log10(barC_safe)  # Convert to dB
 
-# Sum over segments
+# Step 9: Sum over segments
 sumC = np.mean(barCdB, axis=0)
 
-# Normalize each segment data
+# Step 10: Normalize each segment
 hatC = barCdB - sumC
+
+# Check for NaN or infinite values in hatC, and replace them with zeros if they exist
+hatC = np.nan_to_num(hatC, nan=0.0, posinf=0.0, neginf=0.0)
 
 # Time vector for plotting
 t = np.linspace(0, ts, N_s)
 
-# Plotting
-plt.figure(figsize=(10, 12))
+# Step 11: Plotting results
+fig, axs = plt.subplots(3, 1, figsize=(10, 8))
 
-# Plot Cross Spectrogram
-plt.subplot(3, 1, 1)
-plt.surf(t, Fs, barCdB.T, edgecolor='none')
-plt.view_init(azim=0, elev=90)
-plt.colorbar()
-plt.ylim([0, 12000])
-plt.ylabel('Frequency')
-plt.xlabel('Time')
-plt.title(f'Cross Spectrogram of {ts}s of data')
+# Cross Spectrogram
+axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+axs[0].set_title(f'Cross Spectrogram of {ts}s of data')
+axs[0].set_xlabel('Time [s]')
+axs[0].set_ylabel('Frequency [Hz]')
+fig.colorbar(axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[0])
 
-# Plot Normalized Cross Spectrogram
-plt.subplot(3, 1, 2)
-plt.surf(t, Fs, hatC.T, edgecolor='none')
-plt.view_init(azim=0, elev=90)
-plt.colorbar()
-plt.ylim([0, 12000])
-plt.clim([0, 20])
-plt.ylabel('Frequency')
-plt.xlabel('Time')
-plt.title(f'Normalized Cross Spectrogram of {ts}s of data')
+# Normalized Cross Spectrogram
+axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+axs[1].set_title(f'Normalized Cross Spectrogram of {ts}s of data')
+axs[1].set_xlabel('Time [s]')
+axs[1].set_ylabel('Frequency [Hz]')
+fig.colorbar(axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[1])
 
-# Apply threshold
+# Thresholded Cross Spectrogram
 Th = 10
-Th_db = np.where(hatC <= Th)
-bubbles = np.where(hatC >= Th)
-
 hatC_ThdB = hatC.copy()
-hatC_ThdB[Th_db] = 0
-
-# Plot Thresholded Spectrogram
-plt.subplot(3, 1, 3)
-plt.surf(t, Fs, hatC_ThdB.T, edgecolor='none')
-plt.view_init(azim=0, elev=90)
-plt.colorbar()
-plt.ylim([0, 12000])
-plt.clim([10, 20])
-plt.ylabel('Frequency')
-plt.xlabel('Time')
-plt.title(f'Thresholded at {Th} dB')
-plt.colormap('jet')
+hatC_ThdB[hatC <= Th] = 0
+axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000])
+axs[2].set_title(f'Thresholded at {Th} dB')
+axs[2].set_xlabel('Time [s]')
+axs[2].set_ylabel('Frequency [Hz]')
+fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000]), ax=axs[2])
 
 plt.tight_layout()
 plt.show()
-
-# Bubble radius calculation (optional part based on further data)
-f_max = ...  # maximum energy frequency bin (to be defined)
-poly = ...  # polytropic index of gas (to be defined)
-Pst = ...  # Pressure (Pa) (to be defined)
-rho = 1025  # seawater density (kg/m^3)
-
-# Assuming Patm (atmospheric pressure) and Pst (pressure) are given
-Pst = Patm + ...
-
-# Radius calculation
-R0 = (1 / (2 * np.pi * f_max)) * np.sqrt((3 * poly * Pst) / rho)

@@ -103,6 +103,15 @@ Th = 10
 hatC_ThdB = hatC.copy()
 hatC_ThdB[hatC <= Th] = 0
 
+axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno')  # Set color map to 'inferno'
+axs[2].set_title(f'Thresholded at {Th} dB')
+axs[2].set_xlabel('Time [s]')
+axs[2].set_ylabel('Frequency [Hz]')
+fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno'), ax=axs[2])
+
+plt.tight_layout()
+plt.show()
+
 row = 0
 bubbleCount = 0
 bubbleFlag = False
@@ -115,24 +124,10 @@ for line in hatC_ThdB:
         col += 1
         if(val > 0):
             bubbleSize += 1
-            if(bubbleFlag == False):
-
+            if(bubbleSize == 10):
                 bubbleCount += 1
-                bubbleFlag = True
-        else:
-            bubbleFlag = False
 
 
 print(row)
 print(col)
 print("Total bubbles: " , bubbleCount)
-            
-
-axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno')  # Set color map to 'inferno'
-axs[2].set_title(f'Thresholded at {Th} dB')
-axs[2].set_xlabel('Time [s]')
-axs[2].set_ylabel('Frequency [Hz]')
-fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno'), ax=axs[2])
-
-plt.tight_layout()
-plt.show()

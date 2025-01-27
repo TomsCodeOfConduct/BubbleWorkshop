@@ -91,7 +91,7 @@ hatC = np.nan_to_num(hatC, nan=0.0, posinf=0.0, neginf=0.0)
 t = np.linspace(0, ts, N_s)
 
 # Step 11: Plotting results
-fig, axs = plt.subplots(3, 1, figsize=(10, 8))
+fig, axs = plt.subplots(4, 1, figsize=(10, 8))
 
 # Cross Spectrogram
 axs[0].imshow(barCdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='viridis')  # Set color map to 'viridis'
@@ -138,14 +138,30 @@ for line in hatC_ThdB:
             f_max = col - 1
             bubbleFlag = False
             if(f_max != 0):
-                print(f_max)
                 bubbleRadius = (1 / (2*pi*f_max)) * ( sqrt( (3*poly*pst)/rho ) ) 
                 bubbleList.append(bubbleRadius)
 
-print(bubbleList)
 print(row)
 print(col)
 print("Total bubbles: " , bubbleCount)
+
+# Define the bins and range for the histogram
+bins = 200  # Number of bins
+range_min = 0  # Minimum value for x-axis
+range_max = 0.1  # Maximum value for x-axis
+
+# Create the histogram
+axs[3].hist(bubbleList, bins=bins, range=(range_min, range_max), edgecolor='black')
+
+# Set title and labels
+axs[3].set_title("Bubble Size Distribution")
+axs[3].set_xlabel("Bubble Size (cm)")
+axs[3].set_ylabel("Bubble Count")
+
+# Adjust x-axis scale to be from 0 to 0.1 (this is the same as `range=(0, 0.1)`)
+axs[3].set_xlim([0, 0.1])  # Limit the x-axis to range from 0 to 0.1
+axs[3].set_ylim([0, 150])  # Adjust the y-axis range as needed
+
 
 plt.tight_layout()
 plt.show()

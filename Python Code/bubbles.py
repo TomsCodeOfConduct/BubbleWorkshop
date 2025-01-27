@@ -122,6 +122,7 @@ row = 0
 bubbleCount = 0
 bubbleFlag = False
 bubbleList = []
+vol = 0
 
 for line in hatC_ThdB:
     row += 1
@@ -139,10 +140,14 @@ for line in hatC_ThdB:
             bubbleFlag = False
             if(f_max != 0):
                 bubbleRadius = (1 / (2*pi*f_max)) * ( sqrt( (3*poly*pst)/rho ) ) 
+                vol += ( ((4/3)*pi) * (bubbleRadius**3))
+                print(vol)
                 bubbleList.append(bubbleRadius)
 
-print(row)
-print(col)
+print("Total Volume of bubbles: ", vol)
+flux = (1/(ts*60)) * (vol) #Litres per minute
+
+print("Flux: ", flux)
 print("Total bubbles: " , bubbleCount)
 
 # Define the bins and range for the histogram
@@ -154,8 +159,8 @@ range_max = 0.1  # Maximum value for x-axis
 axs[3].hist(bubbleList, bins=bins, range=(range_min, range_max), edgecolor='black')
 
 # Set title and labels
-axs[3].set_title("Bubble Size Distribution")
-axs[3].set_xlabel("Bubble Size (cm)")
+axs[3].set_title("Bubble Radius Distribution")
+axs[3].set_xlabel("Bubble Radius (m)")
 axs[3].set_ylabel("Bubble Count")
 
 # Adjust x-axis scale to be from 0 to 0.1 (this is the same as `range=(0, 0.1)`)

@@ -1,3 +1,5 @@
+from math import sqrt
+from math import pi
 import numpy as np # type: ignore
 import matplotlib.pyplot as plt
 from scipy.io import wavfile
@@ -9,6 +11,13 @@ fs, data = wavfile.read("C:/Users/reabt/OneDrive/Documents/Hackathon Stuff/Data/
 # Step 2: Define parameters
 tstart = 10  # Starting time in seconds
 ts = 5  # Time segment in seconds
+bubbleRadius = 0
+poly = 1.4
+rho = 1025
+g = 9.81
+d = 120 
+patm = 101325
+pst = patm + (rho*d*g)
 
 # If the data has multiple channels (e.g., stereo or multi-channel), choose one (e.g., first channel)
 # If data is 1D, it's already a single-channel signal
@@ -109,12 +118,10 @@ axs[2].set_xlabel('Time [s]')
 axs[2].set_ylabel('Frequency [Hz]')
 fig.colorbar(axs[2].imshow(hatC_ThdB.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='inferno'), ax=axs[2])
 
-plt.tight_layout()
-plt.show()
-
 row = 0
 bubbleCount = 0
 bubbleFlag = False
+bubbleList = []
 
 for line in hatC_ThdB:
     row += 1
@@ -126,8 +133,19 @@ for line in hatC_ThdB:
             bubbleSize += 1
             if(bubbleSize == 10):
                 bubbleCount += 1
+                bubbleFlag = True
+        elif bubbleFlag == True and val == 0:
+            f_max = col - 1
+            bubbleFlag = False
+            if(f_max != 0):
+                print(f_max)
+                bubbleRadius = (1 / (2*pi*f_max)) * ( sqrt( (3*poly*pst)/rho ) ) 
+                bubbleList.append(bubbleRadius)
 
-
+print(bubbleList)
 print(row)
 print(col)
 print("Total bubbles: " , bubbleCount)
+
+plt.tight_layout()
+plt.show()

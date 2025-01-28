@@ -10,7 +10,7 @@ fs, data = wavfile.read("C:/Users/reabt/OneDrive/Documents/Hackathon Stuff/Data/
 
 # Step 2: Define parameters
 tstart = 10  # Starting time in seconds
-ts = 5  # Time segment in seconds
+ts = 240  # Time segment in seconds
 bubbleRadius = 0
 poly = 1.4
 rho = 1025
@@ -108,6 +108,7 @@ fig, axs = plt.subplots(1, 1, figsize=(10, 8))
 # fig.colorbar(axs[1].imshow(hatC.T, aspect='auto', origin='lower', extent=[0, ts, 0, 12000], cmap='plasma'), ax=axs[1])
 
 # Thresholded Cross Spectrogram
+
 Th = 10
 hatC_ThdB = hatC.copy()
 hatC_ThdB[hatC <= Th] = 0
@@ -122,29 +123,33 @@ row = 0
 bubbleCount = 0
 bubbleFlag = False
 bubbleList = []
+bandwidthList = []
 vol = 0
 
 for line in hatC_ThdB:
     row += 1
     col = 0
     bubbleSize = 0
+    bandwidth = 0
     for val in line:
         col += 1
         if(val > 0):
+            bandwidth += 1
             bubbleSize += 1
             if(bubbleSize == 10):
                 bubbleCount += 1
                 bubbleFlag = True
         elif bubbleFlag == True and val == 0:
-            f_max = col - 1
-            bubbleFlag = False
-            if(f_max != 0):
-                bubbleRadius = (1 / (2*pi*f_max)) * ( sqrt( (3*poly*pst)/rho ) )
-                vol += ( ((4/3)*pi) * (bubbleRadius**3))
-                bubbleList.append(bubbleRadius)
+                f_max = (col - 10) * 10
+                bubbleFlag = False
+                if(f_max != 0):
+                    bubbleRadius = (1 / (2*pi*f_max)) * ( sqrt( (3*poly*pst)/rho ) )
+                    vol += ( ((4/3)*pi) * (bubbleRadius**3))
+                    bubbleList.append(bubbleRadius)
+                    bandwidthList.append(bandwidth*10)
 
 print("Total Volume of bubbles: ", vol)
-flux = (1/(ts*60)) * vol
+flux = (vol / ts) * 60
 
 print("Flux: ", flux)
 print("Total bubbles: " , bubbleCount)
@@ -155,7 +160,9 @@ range_min = 0  # Minimum value for x-axis
 range_max = 0.1  # Maximum value for x-axis
 
 # Create the histogram
-axs.hist(bubbleList, bins=bins, range=(range_min, range_max), edgecolor='black')
+n, bins, patches = axs.hist(bubbleList, bins=bins, range=(range_min, range_max), edgecolor='black')
+
+max_count = max(n)
 
 # Set title and labels
 axs.set_title("Bubble Radius Distribution")
@@ -164,9 +171,7 @@ axs.set_ylabel("Bubble Count")
 
 # Adjust x-axis scale to be from 0 to 0.1 (this is the same as `range=(0, 0.1)`)
 axs.set_xlim([0, 0.1])  # Limit the x-axis to range from 0 to 0.1
-axs.set_ylim([0, 100])  # Adjust the y-axis range as needed
-
-plt.text(60, 60, "Test Text")
+axs.set_ylim([0, max_count + 100])  # Adjust the y-axis range as needed
 
 #plt.tight_layout()
 plt.show()

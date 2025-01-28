@@ -39,26 +39,26 @@ len_seg = 512  # Length of each segment
 overlap = 256  # Overlap between segments
 N_s = len(t) // overlap - 1  # Number of segments
 
-# Step 3: Create a function to extract segments
+#Create a function to extract segments
 def seg(p, k):
     return short[(p - 1) * overlap: (p - 1) * overlap + len_seg]
 
-# Step 4: Create the FFT function with Hamming window
+#Create the FFT function with Hamming window
 def X_pk(k, p):
     return np.fft.fft(windows.hamming(len(seg(p, k))) * seg(p, k), 9600)  # 9600 is the number of FFT points
 
 # Frequency vector
 Fs = fs / len(X_pk(1, 1)) * np.arange(len(X_pk(1, 1)))
 
-# Step 5: Cross-spectral function
+# Cross-spectral function
 def C_kl(k, l, p):
     return np.abs(np.conj(X_pk(k, p)) * X_pk(l, p))
 
-# Step 6: Initialize arrays for cross-spectrogram calculation
+# Initialize arrays for cross-spectrogram calculation
 barC_hold = np.zeros_like(C_kl(1, 1, 1))
 barC = np.zeros((N_s, len(C_kl(1, 1, 1))))
 
-# Step 7: Loop through segments to calculate cross-spectrogram
+# Loop through segments to calculate cross-spectrogram
 for pc in range(1, N_s + 1):
     barC_hold = np.zeros_like(C_kl(1, 1, 1))
     
@@ -73,15 +73,15 @@ for pc in range(1, N_s + 1):
         # Handle the case when H = 1 (only one channel), no cross-spectrogram can be computed
         barC[pc - 1, :] = np.zeros_like(barC_hold)
 
-# Step 8: Convert to dB with a larger minimum value to avoid very small numbers
+# Convert to dB with a larger minimum value to avoid very small numbers
 # Ensure there are no zeros before log10 conversion
 barC_safe = np.maximum(barC, 1e-6)  # Ensure there are no zeros in barC
 barCdB = 10 * np.log10(barC_safe)  # Convert to dB
 
-# Step 9: Sum over segments
+# Sum over segments
 sumC = np.mean(barCdB, axis=0)
 
-# Step 10: Normalize each segment
+# Normalize each segment
 hatC = barCdB - sumC
 
 # Check for NaN or infinite values in hatC, and replace them with zeros if they exist
@@ -90,7 +90,7 @@ hatC = np.nan_to_num(hatC, nan=0.0, posinf=0.0, neginf=0.0)
 # Time vector for plotting
 t = np.linspace(0, ts, N_s)
 
-# Step 11: Plotting results
+# Plotting results
 fig, axs = plt.subplots(1, 1, figsize=(10, 8))
 
 # Cross Spectrogram
@@ -164,8 +164,9 @@ axs.set_ylabel("Bubble Count")
 
 # Adjust x-axis scale to be from 0 to 0.1 (this is the same as `range=(0, 0.1)`)
 axs.set_xlim([0, 0.1])  # Limit the x-axis to range from 0 to 0.1
-axs.set_ylim([0, 150])  # Adjust the y-axis range as needed
+axs.set_ylim([0, 100])  # Adjust the y-axis range as needed
 
+plt.text(60, 60, "Test Text")
 
-plt.tight_layout()
+#plt.tight_layout()
 plt.show()
